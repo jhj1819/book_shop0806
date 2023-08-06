@@ -1,13 +1,18 @@
 package summer.book_shop.repository;
 
+import org.springframework.stereotype.Repository;
 import summer.book_shop.domain.Grade;
 import summer.book_shop.domain.User;
 
 import java.sql.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
+@Repository
 public class UserRepository {
     private Connection conn; // 데이터베이스 연결, 쿼리 전송(insert, delete, update)
-    private PreparedStatement pstmt; //
+    private PreparedStatement pstmt;
     private ResultSet rs;
 
     public UserRepository() {
@@ -18,18 +23,20 @@ public class UserRepository {
 
         String url = "jdbc:mysql://" + hostName + ":3306/" + databaseName + utf8Connection;
         String userName = "user_root";
-        String password = "1234";
+        String password = "1234qwer@";
 
         try {
-//            Class.forName(driver); // forName 을 통해 JVM 에 메모리를 올린다 (JDBC 4.0 이후로는 사용하지 않아도 자동 초기화)
+            Class.forName(driver); // forName 을 통해 JVM 에 메모리를 올린다 (JDBC 4.0 이후로는 사용하지 않아도 자동 초기화)
             conn = DriverManager.getConnection(url, userName, password); // 이후 등록된 정보를 통해 데이터베이스 연결
         } catch (SQLException e) {
             e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
     public void save(User user) {
-        String sql = "insert into user values(?, ?, ?, ?, ?);";
+        String sql = "insert into user values(?, ?, ?, ?, ?, ?, ?);";
 
         try {
             pstmt = conn.prepareStatement(sql);
@@ -39,9 +46,8 @@ public class UserRepository {
             pstmt.setString(3, user.getPhoneNum());
             pstmt.setString(4, user.getNickname());
             pstmt.setDate(5, (Date) user.getBirthDate());
-            pstmt.setString(6, user.getGrade().name()); //name메소드로 string으로 변환
-
-
+            pstmt.setString(6, Grade.NONE.toString()); //초기에 비회원 설정
+            pstmt.setDate(7, Date.valueOf(LocalDate.now()));
 
             pstmt.execute();
         } catch (Exception e) {
@@ -104,18 +110,43 @@ public class UserRepository {
             User user = new User();
 
             while(rs.next()) {
-                user.setUserId(rs.getString(1));
-                user.setPassword(rs.getString(2));
-                user.setPhoneNum(rs.getString(3));
-                user.setNickname(rs.getString(4));
-                user.setBirthDate(rs.getDate(5));
-                user.setGrade(Grade.valueOf(rs.getString(6)));
+                getUser(user);
             }
             return user;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public List<User> findAll() {
+        String sql = "select * from user";
+        ArrayList<User> users = new ArrayList<>();
+
+        try {
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery(sql);
+
+            while(rs.next()) {
+                User user = new User();
+                getUser(user);
+                users.add(user);
+            }
+            return users;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void getUser(User user) throws SQLException {
+        user.setUserId(rs.getString(1));
+        user.setPassword(rs.getString(2));
+        user.setPhoneNum(rs.getString(3));
+        user.setNickname(rs.getString(4));
+        user.setBirthDate(rs.getDate(5));
+        user.setGrade(Grade.valueOf(rs.getString(6)));
+        user.setCreatedAt(rs.getDate(7));
     }
 
     public int countByUser() {
@@ -130,4 +161,17 @@ public class UserRepository {
             return 0;
         }
     }
+
+    public void deleteAll() {
+        String sql = "delete from User";
+
+        try {
+            pstmt = conn.prepareStatement(sql);
+            pstmt.execute();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
+
