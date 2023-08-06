@@ -14,7 +14,6 @@ import java.util.Date;
 //@Setter
 //@NoArgsConstructor
 //@AllArgsConstructor
-@Data
 public class Post {
     private Long postId; // PK
     private String title;
